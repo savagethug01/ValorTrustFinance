@@ -1,35 +1,58 @@
-# Use official Python image
-FROM python:3.11-slim
+# Base image with build tools
+FROM debian:bookworm-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PIP_ROOT_USER_ACTION=ignore
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive
 
-# Set working directory
+# Set workdir
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies and mise dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
     build-essential \
     libpq-dev \
+    zstd \
+    unzip \
+    ca-certificates \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY wealthbridge/requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Install mise
+ENV MISE_VERSION="v2024.6.4"
+RUN curl -fsSL https://mise.run | bash
 
-# Copy the full Django project
+# Set up mise in shell
+ENV PATH="/root/.local/share/mise/bin:$PATH"
+ENV MISE_DATA_DIR="/root/.local/share/mise"
+ENV MISE_SETTINGS_PATH="/root/.config/mise/settings.toml"
+
+# Configure mise to build Python from source (avoids .zst issues)
+RUN mkdir -p "$(dirname "$MISE_SETTINGS_PATH")" && \
+    echo '[tools]' > "$MISE_SETTINGS_PATH" && \
+    echo 'python_compile = true' >> "$MISE_SETTINGS_PATH"
+
+# Install Python 3.12 using mise (from source)
+RUN mise install python@3.12 && mise use -g python@3.12
+
+# Confirm Python version
+RUN python --version
+
+# Copy Python dependencies
+COPY wealthbridge/requirements.txt /app/requirements.txt
+
+# Upgrade pip and install requirements
+RUN python -m pip install --upgrade pip && \
+    python -m pip install -r requirements.txt
+
+# Copy the rest of the application
 COPY wealthbridge/ /app/
 
-# Run Django setup commands
-RUN python manage.py collectstatic --no-input
-RUN python manage.py makemigrations
-RUN python manage.py migrate
-RUN python manage.py create_admin
-
-# Expose port
+# Optional: expose port if using Django
 EXPOSE 8000
 
-# Start server
+# Final command (run your app as you want, e.g. Gunicorn)
 CMD ["gunicorn", "wealthbridge.wsgi:application", "--bind", "0.0.0.0:8000"]
