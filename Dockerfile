@@ -1,10 +1,14 @@
- Use official Python image
-FROM python:3.11-slim
+# Base image
+ARG PYTHON_VERSION=3.13-slim
+FROM python:${PYTHON_VERSION}
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PIP_ROOT_USER_ACTION=ignore
+# Ensure mise compiles Python rather than using broken prebuilt versions
+ARG MISE_SETTINGS_PYTHON_COMPILE=1
+ENV MISE_SETTINGS_PYTHON_COMPILE=${MISE_SETTINGS_PYTHON_COMPILE}
+
+# Environment setup
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
 # Set working directory
 WORKDIR /app
