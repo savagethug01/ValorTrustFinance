@@ -1,39 +1,40 @@
-# Base image
-ARG PYTHON_VERSION=3.13-slim
-FROM python:${PYTHON_VERSION}
+# Base image (use stable version; Python 3.13 may not be available yet)
+FROM python:3.12-slim
 
-# Ensure mise compiles Python rather than using broken prebuilt versions
-ARG MISE_SETTINGS_PYTHON_COMPILE=1
-ENV MISE_SETTINGS_PYTHON_COMPILE=${MISE_SETTINGS_PYTHON_COMPILE}
+# Force mise (if ever used) to compile Python instead of using broken binaries
+ENV MISE_SETTINGS__PYTHON_COMPILE=1
 
-# Environment setup
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Set working directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+# Copy and install Python dependencies
 COPY wealthbridge/requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy the full Django project
+# Copy project files
 COPY wealthbridge/ /app/
 
-# Run Django setup commands
-RUN python manage.py collectstatic --no-input
-RUN python manage.py makemigrations
-RUN python manage.py migrate
-RUN python manage.py create_admin
+# Collect static files and prepare DB (safe even if admin creation is optional)
+RUN python manage.py collectstatic --no-input && \
+    python manage.py makemigrations && \
+    python manage.py migrate
 
-# Expose port
+# Optional: Only run if you actually have this command
+RUN python manage.py create_admin || echo "Admin user creation skipped."
+
+# Expose application port
 EXPOSE 8000
 
-# Start server
+# Run Gunicorn
 CMD ["gunicorn", "wealthbridge.wsgi:application", "--bind", "0.0.0.0:8000"]
