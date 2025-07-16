@@ -1,8 +1,10 @@
 # Base image (use stable version; Python 3.13 may not be available yet)
 FROM python:3.12-slim
+FROM python:${PYTHON_VERSION}
 
-# Force mise (if ever used) to compile Python instead of using broken binaries
-ENV MISE_SETTINGS__PYTHON_COMPILE=1
+# Ensure mise compiles Python rather than using broken prebuilt versions
+ARG MISE_SETTINGS_PYTHON_COMPILE=1
+ENV MISE_SETTINGS_PYTHON_COMPILE=${MISE_SETTINGS_PYTHON_COMPILE}
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
