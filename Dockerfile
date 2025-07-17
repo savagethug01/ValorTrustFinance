@@ -27,13 +27,9 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy project files
 COPY wealthbridge/ /app/
 
-# Collect static files and prepare DB (safe even if admin creation is optional)
-RUN python manage.py collectstatic --no-input && \
-    python manage.py makemigrations && \
-    python manage.py migrate
-
-# Optional: Only run if you actually have this command
-RUN python manage.py create_admin || echo "Admin user creation skipped."
+# Copy release script and make it executable
+COPY release.sh /code/BANK/release.sh
+RUN chmod +x /code/BANK/release.sh
 
 # Expose application port
 EXPOSE 8000
