@@ -28,8 +28,8 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 COPY wealthbridge/ /app/
 
 # Copy release script and make it executable
-COPY release.sh /code/BANK/release.sh
-RUN chmod +x /code/BANK/release.sh
+COPY release.sh /wealthbridge/release.sh
+RUN chmod +x /wealthbridge/release.sh
 
 # Expose application port
 EXPOSE 8000
