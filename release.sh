@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "🧱 Making Django migrations..."
+python manage.py makemigrations
+
 echo "🔄 Running Django migrations..."
 python manage.py migrate --noinput
 
